@@ -131,13 +131,33 @@ walkspeedInput.Font = Enum.Font.SourceSans
 
 -- Unlimited Jump Button
 local jumpBtn = Instance.new("TextButton")
-jumpBtn.Size = UDim2.new(0.35, 0, 0.08, 0)
-jumpBtn.Position = UDim2.new(0.6, 0, 0.61, 0)
+jumpBtn.Size = UDim2.new(0.25, 0, 0.08, 0)
+jumpBtn.Position = UDim2.new(0.7, 0, 0.61, 0)
 jumpBtn.BackgroundColor3 = Color3.new(0.8, 0.2, 0.8) -- Ungu
-jumpBtn.Text = "🚀 UNLIMITED JUMP"
+jumpBtn.Text = "🚀 JUMP"
 jumpBtn.TextColor3 = Color3.new(1, 1, 1)
 jumpBtn.TextScaled = true
 jumpBtn.Font = Enum.Font.SourceSans
+
+-- Debug Test Button
+local debugBtn = Instance.new("TextButton")
+debugBtn.Size = UDim2.new(0.25, 0, 0.08, 0)
+debugBtn.Position = UDim2.new(0.05, 0, 0.72, 0)
+debugBtn.BackgroundColor3 = Color3.new(0.8, 0.4, 0) -- Orange gelap
+debugBtn.Text = "🔧 TEST"
+debugBtn.TextColor3 = Color3.new(1, 1, 1)
+debugBtn.TextScaled = true
+debugBtn.Font = Enum.Font.SourceSans
+
+-- Rescan Button
+local rescanBtn = Instance.new("TextButton")
+rescanBtn.Size = UDim2.new(0.25, 0, 0.08, 0)
+rescanBtn.Position = UDim2.new(0.35, 0, 0.72, 0)
+rescanBtn.BackgroundColor3 = Color3.new(0.2, 0.8, 0.8) -- Cyan
+rescanBtn.Text = "🔍 SCAN"
+rescanBtn.TextColor3 = Color3.new(1, 1, 1)
+rescanBtn.TextScaled = true
+rescanBtn.Font = Enum.Font.SourceSans
 
 -- Button test (keep the old one for compatibility)
 local button = autoFishBtn -- Alias untuk kompatibilitas
@@ -154,8 +174,8 @@ closeBtn.Font = Enum.Font.SourceSansBold
 
 -- Status label
 local status = Instance.new("TextLabel")
-status.Size = UDim2.new(0.9, 0, 0.15, 0)
-status.Position = UDim2.new(0.05, 0, 0.72, 0)
+status.Size = UDim2.new(0.65, 0, 0.16, 0)
+status.Position = UDim2.new(0.32, 0, 0.71, 0)
 status.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1) -- Abu gelap
 status.Text = "Status: Ready to Fish!\nDelay: 0.4s | Mode: Normal | Fish Count: 0"
 status.TextColor3 = Color3.new(1, 1, 0) -- Kuning
@@ -206,30 +226,197 @@ print("✅ UI Created successfully!")
 print("📍 Frame position: " .. tostring(frame.Position))
 print("📏 Frame size: " .. tostring(frame.Size))
 
--- Safe access to game services dan remotes
+-- Safe access to game services dan remotes (menggunakan path yang benar dari old.lua)
 local Rs
-local EquipRod, ChargeRod, RequestFishing, FishingComplete, noOxygen, spawnBoat, sellAll
+local EquipRod, UnEquipRod, RequestFishing, ChargeRod, FishingComplete, CancelFishing
+local noOxygen, spawnBoat, despawnBoat, FishingRadar, sellAll
 
 pcall(function()
 	Rs = game:GetService("ReplicatedStorage")
-	if Rs and Rs:FindFirstChild("events") then
-		EquipRod = Rs.events:FindFirstChild("equiprod")
-		ChargeRod = Rs.events:FindFirstChild("chargerod")
-		RequestFishing = Rs.events:FindFirstChild("requestfishing")
-		FishingComplete = Rs.events:FindFirstChild("fishingcomplete")
-		noOxygen = Rs.events:FindFirstChild("nooxygen")
-		spawnBoat = Rs.events:FindFirstChild("spawnboat")
-		sellAll = Rs.events:FindFirstChild("sellall")
+	if Rs and Rs:FindFirstChild("Packages") then
+		-- Path yang benar dari old.lua yang sudah bekerja
+		EquipRod = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RE/EquipToolFromHotbar"]
+		UnEquipRod = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RE/UnequipToolFromHotbar"]
+		RequestFishing = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RF/RequestFishingMinigameStarted"]
+		ChargeRod = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RF/ChargeFishingRod"]
+		FishingComplete = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RE/FishingCompleted"]
+		CancelFishing = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RF/CancelFishingInputs"]
+		spawnBoat = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RF/SpawnBoat"]
+		despawnBoat = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RF/DespawnBoat"]
+		FishingRadar = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RF/UpdateFishingRadar"]
+		sellAll = Rs.Packages._Index["sleitnick_net@0.2.0"].net["RF/SellAllItems"]
+		print("✅ Found all fishing RemoteEvents using correct paths from old.lua")
+	else
+		print("❌ Could not find Packages folder in ReplicatedStorage")
 	end
 end)
 
--- Variables untuk fitur
-local autoFish = false
+-- Enhanced RemoteEvent detection
+local function scanForFishingRemotes()
+	print("🔍 Scanning for fishing RemoteEvents...")
+	
+	pcall(function()
+		Rs = game:GetService("ReplicatedStorage")
+		
+		if Rs then
+			print("✅ ReplicatedStorage found")
+			
+			-- Method 1: Check standard events folder
+			if Rs:FindFirstChild("events") then
+				print("📁 Found events folder")
+				EquipRod = Rs.events:FindFirstChild("equiprod")
+				ChargeRod = Rs.events:FindFirstChild("chargerod") 
+				RequestFishing = Rs.events:FindFirstChild("requestfishing")
+				FishingComplete = Rs.events:FindFirstChild("fishingcomplete")
+				noOxygen = Rs.events:FindFirstChild("nooxygen")
+				spawnBoat = Rs.events:FindFirstChild("spawnboat")
+				sellAll = Rs.events:FindFirstChild("sellall")
+			end
+			
+			-- Method 2: Deep scan for fishing-related remotes
+			for _, descendant in pairs(Rs:GetDescendants()) do
+				if descendant:IsA("RemoteEvent") or descendant:IsA("RemoteFunction") then
+					local name = string.lower(descendant.Name)
+					
+					-- Fishing related
+					if name:find("fish") or name:find("rod") or name:find("catch") or name:find("bait") then
+						print("🎣 Found fishing remote: " .. descendant.Name)
+						if name:find("equip") and not EquipRod then
+							EquipRod = descendant
+						elseif name:find("charge") and not ChargeRod then
+							ChargeRod = descendant
+						elseif name:find("request") and not RequestFishing then
+							RequestFishing = descendant
+						elseif name:find("complete") and not FishingComplete then
+							FishingComplete = descendant
+						end
+					end
+					
+					-- Oxygen related
+					if name:find("oxygen") or name:find("air") or name:find("breath") then
+						print("🫁 Found oxygen remote: " .. descendant.Name)
+						if not noOxygen then noOxygen = descendant end
+					end
+					
+					-- Boat related
+					if name:find("boat") or name:find("ship") or name:find("spawn") then
+						print("🚤 Found boat remote: " .. descendant.Name)
+						if not spawnBoat then spawnBoat = descendant end
+					end
+					
+					-- Sell related
+					if name:find("sell") or name:find("money") or name:find("cash") then
+						print("💰 Found sell remote: " .. descendant.Name)
+						if not sellAll then sellAll = descendant end
+					end
+				end
+			end
+			
+			print("🔧 RemoteEvent Detection Results:")
+			print("- EquipRod: " .. (EquipRod and "✅ " .. EquipRod.Name or "❌ Not Found"))
+			print("- ChargeRod: " .. (ChargeRod and "✅ " .. ChargeRod.Name or "❌ Not Found"))
+			print("- RequestFishing: " .. (RequestFishing and "✅ " .. RequestFishing.Name or "❌ Not Found"))
+			print("- FishingComplete: " .. (FishingComplete and "✅ " .. FishingComplete.Name or "❌ Not Found"))
+			print("- NoOxygen: " .. (noOxygen and "✅ " .. noOxygen.Name or "❌ Not Found"))
+			print("- SpawnBoat: " .. (spawnBoat and "✅ " .. spawnBoat.Name or "❌ Not Found"))
+			print("- SellAll: " .. (sellAll and "✅ " .. sellAll.Name or "❌ Not Found"))
+		else
+			print("❌ ReplicatedStorage not found")
+		end
+	end)
+end
+
+-- Run the scan
+scanForFishingRemotes()
+
+-- Variables untuk fitur (menggunakan Global variables seperti di old.lua)
+_G.AutoFishing = false
+_G.FishingDelay = 0.4
+_G.HybridMode = false
+_G.HybridMinDelay = 0.2
+_G.HybridMaxDelay = 0.5
+
 local fishCount = 0
-local fishingDelay = 0.4
-local hybridMode = false
 local noOxygenActive = false
 local unlimitedJump = false
+local autoFishThread = nil
+
+-- Auto fishing function yang diambil dari old.lua (yang sudah terbukti bekerja)
+local function toggleFishing(state)
+	if state == true then
+		_G.AutoFishing = true
+
+		-- Spawn thread AutoFishing
+		autoFishThread = task.spawn(function()
+			while _G.AutoFishing do
+				pcall(function()
+					-- Pastikan equip rod dulu
+					local char = game.Players.LocalPlayer.Character
+					if not char then
+						print("No character found, waiting...")
+						return
+					end
+					
+					local equippedTool = char:FindFirstChild("!!!EQUIPPED_TOOL!!!")
+
+					if not equippedTool then
+						-- Reset state dulu biar server mau accept equip baru
+						if CancelFishing then
+							CancelFishing:InvokeServer()
+						end
+						if EquipRod then
+							EquipRod:FireServer(1)
+						end
+					end
+
+					-- Lanjut proses memancing
+					if ChargeRod then
+						ChargeRod:InvokeServer(workspace:GetServerTimeNow())
+					end
+					if RequestFishing then
+						RequestFishing:InvokeServer(-1.2379989624023438, 0.9800224985802423)
+					end
+					
+					-- Pilih delay berdasarkan mode
+					local currentDelay
+					if _G.HybridMode then
+						-- Hybrid Mode: Random delay antara min dan max
+						local randomValue = math.random()
+						currentDelay = _G.HybridMinDelay + (randomValue * (_G.HybridMaxDelay - _G.HybridMinDelay))
+						currentDelay = math.floor(currentDelay * 1000) / 1000 -- Round to 3 decimal places
+					else
+						-- Normal Mode: Fixed delay
+						currentDelay = _G.FishingDelay
+					end
+					
+					task.wait(currentDelay)
+					if FishingComplete then
+						FishingComplete:FireServer()
+					end
+					
+					fishCount = fishCount + 1
+				end)
+			end
+		end)
+
+	else
+		_G.AutoFishing = false
+
+		pcall(function()
+			if CancelFishing then
+				CancelFishing:InvokeServer()
+			end
+			if UnEquipRod then
+				UnEquipRod:FireServer()
+			end
+		end)
+		
+		if autoFishThread then
+			task.cancel(autoFishThread)
+			autoFishThread = nil
+		end
+	end
+end
 
 -- Auto fishing function yang proper
 local function startAutoFish()
@@ -239,17 +426,82 @@ local function startAutoFish()
 	autoFishBtn.BackgroundColor3 = Color3.new(1, 0, 0) -- Merah
 	status.Text = "Status: Auto Fishing ACTIVE!\nDelay: " .. fishingDelay .. "s | Mode: " .. (hybridMode and "Hybrid" or "Normal") .. " | Fish Count: " .. fishCount
 	
+	print("🎣 Starting Auto Fishing...")
+	print("🔧 Available RemoteEvents:")
+	print("- EquipRod: " .. (EquipRod and "✅" or "❌"))
+	print("- ChargeRod: " .. (ChargeRod and "✅" or "❌"))
+	print("- RequestFishing: " .. (RequestFishing and "✅" or "❌"))
+	print("- FishingComplete: " .. (FishingComplete and "✅" or "❌"))
+	
 	spawn(function()
 		while autoFish do
+			local success = false
+			
+			-- Method 1: Try standard fishing events
 			pcall(function()
-				if EquipRod then EquipRod:FireServer() end
-				if ChargeRod then ChargeRod:FireServer() end
-				if RequestFishing then RequestFishing:FireServer() end
-				if FishingComplete then FishingComplete:FireServer() end
-				
+				if EquipRod then 
+					EquipRod:FireServer()
+					print("🎣 EquipRod fired")
+					success = true
+				end
+				if ChargeRod then 
+					ChargeRod:FireServer()
+					print("⚡ ChargeRod fired")
+					success = true
+				end
+				if RequestFishing then 
+					RequestFishing:FireServer()
+					print("🎯 RequestFishing fired")
+					success = true
+				end
+				if FishingComplete then 
+					FishingComplete:FireServer()
+					print("✅ FishingComplete fired")
+					success = true
+				end
+			end)
+			
+			-- Method 2: Try alternative fishing method
+			if not success then
+				pcall(function()
+					-- Try direct fishing without events
+					local character = player.Character
+					if character then
+						local tool = character:FindFirstChildOfClass("Tool")
+						if tool then
+							tool:Activate()
+							print("🎣 Tool activated directly")
+							success = true
+						end
+					end
+				end)
+			end
+			
+			-- Method 3: Try any available fishing remotes
+			if not success and Rs then
+				pcall(function()
+					for _, remote in pairs(Rs:GetDescendants()) do
+						if remote:IsA("RemoteEvent") and (
+							string.lower(remote.Name):find("fish") or 
+							string.lower(remote.Name):find("rod") or
+							string.lower(remote.Name):find("catch")
+						) then
+							remote:FireServer()
+							print("🎣 Found and fired: " .. remote.Name)
+							success = true
+							break
+						end
+					end
+				end)
+			end
+			
+			if success then
 				fishCount = fishCount + 1
 				status.Text = "Status: Auto Fishing ACTIVE!\nDelay: " .. fishingDelay .. "s | Mode: " .. (hybridMode and "Hybrid" or "Normal") .. " | Fish Count: " .. fishCount
-			end)
+			else
+				status.Text = "Status: ❌ No fishing method found!\nDelay: " .. fishingDelay .. "s | Mode: " .. (hybridMode and "Hybrid" or "Normal") .. " | Fish Count: " .. fishCount
+				print("❌ No working fishing method found")
+			end
 			
 			local currentDelay = fishingDelay
 			if hybridMode then
